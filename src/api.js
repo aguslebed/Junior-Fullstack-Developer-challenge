@@ -24,7 +24,7 @@ export async function obtenerPosicionesAbiertas() {
     return response.json();
 }
 
-export async function enviarPostulacion(uuid, jobId, candidateId, repoUrl) {
+export async function enviarPostulacion(uuid, jobId, candidateId, repoUrl, applicationId) {
     const response = await fetch(`${BASE_URL}/api/candidate/apply-to-job`, {
         method: "POST",
         headers: {
@@ -35,7 +35,13 @@ export async function enviarPostulacion(uuid, jobId, candidateId, repoUrl) {
             "jobId": jobId,
             "candidateId": candidateId,
             "repoUrl": repoUrl,
+            "applicationId": applicationId
 
         }),
     });
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Error al enviar postulacion");
+    }
+    return response.json();
 }

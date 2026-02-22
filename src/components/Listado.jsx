@@ -1,10 +1,11 @@
-import { obtenerPosicionesAbiertas, obtenerDatosPostulante } from "../api"
+import { obtenerPosicionesAbiertas, obtenerDatosPostulante, enviarPostulacion as enviarPostulacionApi } from "../api"
 import { useEffect, useState } from "react"
 
 function Listado() {
 
     const [posiciones, setPosiciones] = useState([])
     const [postulante, setPostulante] = useState([])
+    const [repoUrl, setRepoUrl] = useState("")
 
     useEffect(() => {
         obtenerPostulante()
@@ -23,8 +24,20 @@ function Listado() {
 
     async function enviarPostulacion(jobId) {
         const job = posiciones.find((job) => job.id === jobId)
-        console.log(job)
-        //const response = await enviarPostulacion()
+        if ((repoUrl.length == 0) || (repoUrl.trim().length == 0) || (!repoUrl.startsWith("https://github.com/"))) {
+            alert("Tenes que ingresar un repositorio de github")
+            return
+        }
+        const response = await enviarPostulacionApi(postulante.uuid, job.id, postulante.candidateId, repoUrl, postulante.applicationId)
+
+        if (!response.ok) {
+            alert("Error al enviar la postulacion")
+            return
+        } else {
+            alert("Postulacion enviada correctamente")
+            setRepoUrl("")
+        }
+
     }
     return (
         <div className="flex flex-col items-center px-6 py-8">
@@ -56,6 +69,7 @@ function Listado() {
                                         type="text"
                                         placeholder="https://github.com/usuario/repo"
                                         className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#210f38] focus:border-transparent transition"
+                                        onChange={(e) => setRepoUrl(e.target.value)}
                                     />
                                 </td>
                                 <td className="px-6 py-4 text-center">
