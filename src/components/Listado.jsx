@@ -1,11 +1,11 @@
 import { obtenerPosicionesAbiertas, obtenerDatosPostulante, enviarPostulacion as enviarPostulacionApi } from "../api"
 import { useEffect, useState } from "react"
 
-function Listado() {
+function Listado({ mostrarModal }) {
 
     const [posiciones, setPosiciones] = useState([])
-    const [postulante, setPostulante] = useState([])
-    const [repoUrl, setRepoUrl] = useState("")
+    const [postulante, setPostulante] = useState({})
+    const [repoUrls, setRepoUrls] = useState({})
 
     useEffect(() => {
         obtenerPostulante()
@@ -13,32 +13,41 @@ function Listado() {
     }, []);
 
     async function obtenerPosiciones() {
-        const response = await obtenerPosicionesAbiertas()
-        setPosiciones(response)
+        try {
+            const response = await obtenerPosicionesAbiertas()
+            setPosiciones(response)
+        } catch (error) {
+            mostrarModal("Error al cargar posiciones", error.message)
+        }
     }
 
     async function obtenerPostulante() {
-        const response = await obtenerDatosPostulante()
-        setPostulante(response)
+        try {
+            const response = await obtenerDatosPostulante()
+            setPostulante(response)
+        } catch (error) {
+            mostrarModal("Error al obtener datos del postulante", error.message)
+        }
     }
 
     async function enviarPostulacion(jobId) {
         const job = posiciones.find((job) => job.id === jobId)
-        if ((repoUrl.length == 0) || (repoUrl.trim().length == 0) || (!repoUrl.startsWith("https://github.com/"))) {
-            alert("Tenes que ingresar un repositorio de github")
+        const repoUrl = repoUrls[jobId] || ""
+
+        if (!repoUrl || repoUrl.trim().length === 0 || !repoUrl.startsWith("https://github.com/")) {
+            mostrarModal("URL inválida", "Tenés que ingresar un repositorio de GitHub válido (https://github.com/...)")
             return
         }
-        const response = await enviarPostulacionApi(postulante.uuid, job.id, postulante.candidateId, repoUrl, postulante.applicationId)
 
-        if (!response.ok) {
-            alert("Error al enviar la postulacion")
-            return
-        } else {
-            alert("Postulacion enviada correctamente")
-            setRepoUrl("")
+        try {
+            const response = await enviarPostulacionApi(postulante.uuid, job.id, postulante.candidateId, repoUrl, postulante.applicationId)
+            mostrarModal("Postulación enviada correctamente", "Tu postulación ha sido enviada exitosamente")
+            setRepoUrls(prev => ({ ...prev, [jobId]: "" }))
+        } catch (error) {
+            mostrarModal("Error al enviar la postulación", error.message)
         }
-
     }
+
     return (
         <div className="flex flex-col items-center px-6 py-8">
             <h2 className="text-3xl font-bold text-[#210f38] mb-6 tracking-tight">
@@ -58,8 +67,7 @@ function Listado() {
                         {posiciones.map((posicion, index) => (
                             <tr
                                 key={posicion.id}
-                                className={`border-b border-purple-100 transition-colors duration-150 hover:bg-purple-200 ${index % 2 === 0 ? "bg-white" : "bg-[#f9f6fb]"
-                                    }`}
+                                className={`border-b border-purple-100 transition-colors duration-150 hover:bg-purple-200 ${index % 2 === 0 ? "bg-white" : "bg-[#f9f6fb]"}`}
                             >
                                 <td className="px-6 py-4 text-gray-700 font-medium">
                                     {posicion.title}
@@ -69,13 +77,15 @@ function Listado() {
                                         type="text"
                                         placeholder="https://github.com/usuario/repo"
                                         className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#210f38] focus:border-transparent transition"
-                                        onChange={(e) => setRepoUrl(e.target.value)}
+                                        value={repoUrls[posicion.id] || ""}
+                                        onChange={(e) => setRepoUrls(prev => ({ ...prev, [posicion.id]: e.target.value }))}
                                     />
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                    <button className="bg-[#210f38] hover:bg-[#3a1a5e] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors duration-200 shadow-sm cursor-pointer"
-
-                                        onClick={() => enviarPostulacion(posicion.id)}>
+                                    <button
+                                        className="bg-[#210f38] hover:bg-[#3a1a5e] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors duration-200 shadow-sm cursor-pointer"
+                                        onClick={() => enviarPostulacion(posicion.id)}
+                                    >
                                         Postularme
                                     </button>
                                 </td>
@@ -83,7 +93,7 @@ function Listado() {
                         ))}
                         {posiciones.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="text-center py-12 text-gray-400 text-sm italic">
+                                <td colSpan={3} className="text-center py-12 text-gray-400 text-sm italic">
                                     Cargando posiciones...
                                 </td>
                             </tr>

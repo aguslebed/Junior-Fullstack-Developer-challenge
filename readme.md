@@ -11,7 +11,6 @@ Instalar las dependencias del proyecto:
 
 ```
 npm install
-
 ```
 
 Las herramientas utilizadas son:
